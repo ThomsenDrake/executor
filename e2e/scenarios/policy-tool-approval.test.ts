@@ -38,7 +38,7 @@ return JSON.stringify(result);
 `;
 
 scenario(
-  "Policy tools · policies.create pauses for approval from its own annotation, then runs once approved",
+  "Policy tools · policies.create pauses for approval from its own annotation, then resumes from a new MCP session",
   {},
   Effect.gen(function* () {
     const target = yield* Target;
@@ -85,7 +85,11 @@ scenario(
         "policy is not written while the approval is still pending",
       ).toBe(false);
 
-      const resumed = yield* session.approvePaused(paused.text);
+      const resumeSession = mcp.session(identity);
+      yield* resumeSession.listTools();
+      const resumed = yield* resumeSession.approvePaused(paused.text);
+      const replayed = yield* resumeSession.approvePaused(paused.text);
+      expect(replayed.text, "retry replays the completed result").toBe(resumed.text);
       expect(resumed.ok, "resumed execution completed without error").toBe(true);
 
       const afterApproval = yield* client.policies.list();
